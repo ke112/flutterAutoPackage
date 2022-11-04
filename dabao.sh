@@ -19,7 +19,7 @@
 #--------------------------------------------
 
 log() {
-  echo "--------- $* ----------"
+  echo "\033[42;97m $* \033[0m"
 }
 
 exitShell() {
@@ -41,7 +41,7 @@ removeTrash() {
   nowTime=$(date +%Y-%m-%d-%H:%M:%S)
   nowTime_s=$(date +%s)
   # log "现在时间: "$nowTime_s
-  cd
+  cd $dirname
   if [ ! -e lastBuildTime ]; then
     touch lastBuildTime
     echo $nowTime_s >lastBuildTime
@@ -82,7 +82,7 @@ completeArchive() {
 
 uploadArchive() {
   if [[ -e $packagePath ]]; then
-    cd
+    cd $dirname
     sh upload.sh ${packagePath}
     completeArchive
   else
@@ -100,7 +100,6 @@ updatePub() {
   else
     log 'pub get完成'
   fi
-  # flutter pub upgrade
   flutter packages upgrade
   if [ $? -ne 0 ]; then
     log 'flutter packages upgrade失败了'
@@ -113,7 +112,7 @@ askArchive() {
   startTime=$(date +%Y-%m-%d-%H:%M:%S)
   startTime_s=$(date +%s)
   cd $project_path
-  branch=(git branch --show-current)
+  branch=$(git branch --show-current)
   log "当前的代码分支为: $branch"
   git stash
   git pull
@@ -126,7 +125,7 @@ askArchive() {
 packageiOS() {
   askArchive
   log "开始打iOS-${target}环境"
-  cd
+  cd $dirname
   if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
     sh ipa.sh $project_path $target 1
     # 自己去上传
@@ -244,6 +243,11 @@ handleEnv() {
 }
 
 project_path=$1
+
+dirname=$(
+  cd $(dirname $0)
+  pwd
+)
 
 if [[ -e $project_path ]]; then
   if [[ -e "$project_path/ios" && -e "$project_path/android" ]]; then
