@@ -126,6 +126,9 @@ for i in {1..60}; do
   if [ $code -eq 0 ]; then
     echo ${result} | jq
     showUploadTime
+
+    open "https://www.pgyer.com/manager/dashboard/app/"
+
     [[ "${result}" =~ \"buildQRCodeURL\":\"([\:\_\.\/\\A-Za-z0-9\-]+)\" ]] && buildQRCodeURL=$(echo ${BASH_REMATCH[1]} | sed 's!\\\/!/!g')
     open $buildQRCodeURL
 

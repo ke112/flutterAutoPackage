@@ -91,39 +91,7 @@ uploadArchive() {
   fi
 }
 
-updatePub() {
-  ulimit -n 4096
-  flutter clean
-  flutter packages pub get
-  if [ $? -ne 0 ]; then
-    log 'flutter pub get失败了'
-  else
-    log 'pub get完成'
-  fi
-  flutter packages upgrade
-  if [ $? -ne 0 ]; then
-    log 'flutter packages upgrade失败了'
-  else
-    log 'pub upgrade完成'
-  fi
-}
-
-askArchive() {
-  startTime=$(date +%Y-%m-%d-%H:%M:%S)
-  startTime_s=$(date +%s)
-  cd $project_path
-  branch=$(git branch --show-current)
-  log "当前的代码分支为: $branch"
-  git stash
-  git pull
-  git stash pop
-  # git add . #这里不能添加这个,此处只是拉代码
-  # flutter pub cache repair
-  updatePub
-}
-
 packageiOS() {
-  askArchive
   log "开始打iOS-${target}环境"
   cd $dirname
   if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
@@ -156,7 +124,6 @@ handleHuaweiConfig() {
 }
 
 packageAndroid() {
-  askArchive
   log "开始打Android-${target}环境"
   cd $project_path
   handleHuaweiConfig
@@ -165,7 +132,45 @@ packageAndroid() {
   uploadArchive
 }
 
+updatePub() {
+  ulimit -n 4096
+  flutter clean
+  flutter packages pub get
+  if [ $? -ne 0 ]; then
+    log 'flutter pub get失败了'
+  else
+    log 'pub get完成'
+  fi
+  flutter packages upgrade
+  if [ $? -ne 0 ]; then
+    log 'flutter packages upgrade失败了'
+  else
+    log 'pub upgrade完成'
+  fi
+}
+
+askArchive() {
+  cd $project_path
+  branch=$(git branch --show-current)
+  log "当前的代码分支为: $branch"
+  git stash
+  git pull
+  git stash pop
+  # git add . #这里不能添加这个,此处只是拉代码
+  # flutter pub cache repair
+  updatePub
+}
+
 prePackage() {
+  startTime=$(date +%Y-%m-%d-%H:%M:%S)
+  startTime_s=$(date +%s)
+  if (($isFast == 1)); then
+    log '开启快速打包'
+  else
+    log '默认全面打包'
+    askArchive
+  fi
+
   if ((${plat} == 1)); then
     packageiOS
   elif ((${plat} == 2)); then
@@ -262,13 +267,14 @@ if [[ -e $project_path ]]; then
     exitShell
   fi
 
-  if [[ -n $2 && -n $3 && -n $4 ]]; then
+  if [[ -n $2 && -n $3 && -n $4 && -n $5 ]]; then
     plat=$2
     env=$3
     version=$4
     handlePlat
     handleEnv
     handleVersion
+    isFast=$5
   else
     log "请输入要打包的平台，1:iOS  2:Android"
     read -n1 plat
@@ -282,6 +288,8 @@ if [[ -e $project_path ]]; then
     read -n1 version
     log
     handleVersion
+    log "请输入是否需要打包速度模式，1:快速打包(必须保证可以运行的)  2:传统打包(会处理代码和三方库)"
+    read -n1 isFast
     log
   fi
   prePackage
