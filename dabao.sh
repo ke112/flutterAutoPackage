@@ -117,36 +117,17 @@ packageiOS() {
 }
 
 handleHuaweiConfig() {
-  searchFile ${project_path}/android/app "agconnect-services-${target}.json"
-  packageJson=$searchPath
+  packageJson=$(find ${project_path}/android/app -name "agconnect-services-${target}.json")
+  agconnect_services=$(find ${project_path}/android/app -name "agconnect-services.json")
 
-  searchFile ${project_path}/android/app "agconnect-services.json"
-  agconnect_services=$searchPath
-
-  log $packageJson
-  log $agconnect_services
   if [[ -e $packageJson && -e $agconnect_services ]]; then
+    log $packageJson
+    log $agconnect_services
     cp $packageJson $agconnect_services
     log '存在要打包的json,已处理'
   fi
 }
 
-searchFile() {
-  if [[ -n $2 ]]; then
-    searthKey=$2  # 外部调用时,才会有值
-    searchPath='' # 防止多次调用,后者取到前者查询的结果
-  fi
-  for file in $(ls $1); do
-    if [ -d $1"/"$file ]; then # 是文件夹就递归
-      searchFile $1"/"$file
-    else
-      if [[ "$searthKey" =~ $file ]]; then
-        searchPath=$(echo $1"/"$file)
-        break
-      fi
-    fi
-  done
-}
 packageAndroid() {
   log "开始打Android-${target}环境"
   cd $project_path
