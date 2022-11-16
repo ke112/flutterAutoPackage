@@ -26,6 +26,7 @@ exitShell() {
   # killall iTerm2  #这两个会把所有的都关掉,不可以
   exit 0 #退出了后边就无法执行了
   # killall Terminal #为了用于command时,关闭窗口
+  # osascript -e "tell application \"System Events\" to keystroke \"w\" using command down"
 }
 
 removeTrash() {
@@ -41,7 +42,7 @@ removeTrash() {
   nowTime=$(date +%Y-%m-%d-%H:%M:%S)
   nowTime_s=$(date +%s)
   # log "现在时间: "$nowTime_s
-  cd $dirname
+  cd $PARENT_DIR
   if [ ! -e lastBuildTime ]; then
     touch lastBuildTime
     echo $nowTime_s >lastBuildTime
@@ -76,7 +77,7 @@ showArchiveTime() {
 }
 
 completeArchive() {
-  if [[$agconnect_services ]]; then
+  if [[ $agconnect_services ]]; then
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
   fi
   showArchiveTime
@@ -85,7 +86,7 @@ completeArchive() {
 
 uploadArchive() {
   if [[ -e $packagePath ]]; then
-    cd $dirname
+    cd $CURRENT_DIR
     sh upload.sh ${packagePath}
     completeArchive
   else
@@ -96,7 +97,7 @@ uploadArchive() {
 
 packageiOS() {
   log "开始打iOS-${target}环境"
-  cd $dirname
+  cd $CURRENT_DIR
   if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
     sh ipa.sh $project_path $target 1
     # 自己去上传
@@ -272,8 +273,13 @@ handleEnv() {
 
 project_path=$1
 
-dirname=$(
+CURRENT_DIR=$(
   cd $(dirname $0)
+  pwd
+)
+PARENT_DIR=$(
+  cd $(dirname $0)
+  cd ..
   pwd
 )
 
