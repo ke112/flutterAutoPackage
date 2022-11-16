@@ -1,13 +1,7 @@
 #!/bin/bash
-###
-# @Author: zhangzhihua 54562841@qq.com
-# @Date: 2020-01-21 11:25:26
-# @LastEditors: zhangzhihua
-# @LastEditTime: 2022-10-20 11:02:18
-###
 #--------------------------------------------
 # 使用介绍 ： flutter开发项目中，兼容iOS Android自动打包上传到蒲公英脚本 2022.3.1
-# 使用方式 ： sh dabao.sh /user/xxx/shop_app 1 3 1
+# 使用方式 ： sh dabao.sh /user/xxx/shop_app 1 3 1 2
 # 使用说明列举如下 ：
 # 1.包含自动打iOS Android包，android必须为flutter项目
 # 2.自动上传到蒲公英平台，可自定义apikey ukey，以及上传后自动打开下载的web界面
@@ -15,7 +9,11 @@
 # 4.$1为需要打包的项目地址
 # 5.$2为可传对应平台 1:iOS  2:Android
 # 6.$3为对应环境 1:正式 2:灰度 3:测试 4:开发 5:App Store(iOS)
+# 6.$4为打包模式 1:快速打包 2:常规打包
 # 此shell依赖 ipa.sh 和 upload.sh
+#
+# tips:
+# 1.针对打安卓包,如果一直running grade task卡住,需要替换flutter sdk以及当前Android/app 中的repositories
 #--------------------------------------------
 
 log() {
