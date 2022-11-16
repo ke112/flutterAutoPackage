@@ -76,6 +76,7 @@ showArchiveTime() {
 
 completeArchive() {
   if [[ -e $agconnect_services ]]; then
+    cd $project_path
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
     log '华为推送json文件已重置'
   fi
