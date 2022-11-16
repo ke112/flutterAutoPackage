@@ -75,8 +75,9 @@ showArchiveTime() {
 }
 
 completeArchive() {
-  if [[ $agconnect_services ]]; then
+  if [[ -e $agconnect_services ]]; then
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
+    log '华为推送json文件已重置'
   fi
   showArchiveTime
   removeTrash
@@ -122,7 +123,7 @@ handleHuaweiConfig() {
     log $packageJson
     log $agconnect_services
     cp $packageJson $agconnect_services
-    log '存在要打包的json,已处理'
+    log '存在要打包的华为推送json,已处理'
   fi
 }
 
