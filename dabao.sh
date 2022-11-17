@@ -40,7 +40,7 @@ removeTrash() {
   nowTime=$(date +%Y-%m-%d-%H:%M:%S)
   nowTime_s=$(date +%s)
   # log "现在时间: "$nowTime_s
-  cd $PARENT_DIR
+  cd
   if [ ! -e lastBuildTime ]; then
     touch lastBuildTime
     echo $nowTime_s >lastBuildTime
@@ -169,7 +169,7 @@ askArchive() {
 prePackage() {
   startTime=$(date +%Y-%m-%d-%H:%M:%S)
   startTime_s=$(date +%s)
-  if (($isFast == 1)); then
+  if (($isFast == 2)); then
     log '开启快速打包'
   else
     log '默认全面打包'
@@ -200,23 +200,25 @@ handlePlat() {
 handleVersion() {
   ss='选择的flutter版本是'
   if ((${version} == 1)); then
+    log $ss'最新的'
+    export PATH=/Users/ke/Documents/flutter/bin:$PATH
+  elif ((${version} == 2)); then
     log $ss'3.0.5'
     export PATH=/Users/ke/Documents/flutter_3.0.5/bin:$PATH
-  elif ((${version} == 2)); then
+  elif ((${version} == 3)); then
     log $ss'2.10.5'
     export PATH=/Users/ke/Documents/flutter_2.10.5/bin:$PATH
-  elif ((${version} == 3)); then
+  elif ((${version} == 4)); then
     log $ss'2.8.1'
     export PATH=/Users/ke/Documents/flutter_2.8.1/bin:$PATH
-  elif ((${version} == 4)); then
+  elif ((${version} == 5)); then
     log $ss'2.5.3'
     export PATH=/Users/ke/Documents/flutter_2.5.3/bin:$PATH
-  elif ((${version} == 5)); then
-    export PATH=/Users/ke/Documents/flutter/bin:$PATH
   else
     log "没有找到打包的flutter版本,自动退出打包"
     exitShell
   fi
+  flutter --version
 }
 
 handleEnv() {
@@ -294,11 +296,11 @@ if [[ -e $project_path ]]; then
     read -n1 env
     log
     handleEnv
-    log "请输入要打包的flutter环境版本，1:3.0.5  2:2.10.5  3:2.8.1  4:2.5.3  5.最新版本"
+    log "请输入要打包的flutter环境版本，1.最新版本 2:3.0.5  3:2.10.5  4:2.8.1  5:2.5.3"
     read -n1 version
     log
     handleVersion
-    log "请输入是否需要打包速度模式，1:快速打包(必须保证可以运行的)  2:传统打包(会处理代码和三方库)"
+    log "请输入是否需要打包速度模式，1:传统打包(会处理代码和三方库)  2:快速打包(必须保证可以运行的)"
     read -n1 isFast
     log
   fi
