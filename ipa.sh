@@ -47,13 +47,16 @@ if [[ -e $project_dir ]]; then
 
   # 检查是否有scheme
   if [[ ! -n $scheme ]]; then
-    log "请输入要打包的scheme (Target),不能有错误"
-    read -r scheme
+    scheme=$project_name
+    echo '默认scheme为' $scheme
+    # log "请输入要打包的scheme (Target),不能有错误,默认是主工程scheme"
+    # read -r scheme
 
-    if [[ ! -n $scheme ]]; then
-      scheme='Runner'
-      log '默认scheme为Runner'
-    fi
+    # if [[ ! -n $scheme ]]; then
+    #   scheme=$project_name
+    # fi
+  else
+    echo '自定义scheme为' $scheme
   fi
   log '开始打包ios'
 else
@@ -257,9 +260,9 @@ ipaPath=$(find ${export_ipa_path} -name '*ipa')
 if [ -f "$ipaPath" ]; then
   echo "\033[32;1mexportArchive ipa包成功,准备进行重命名\033[0m"
   if [ $failedTimes=0 ]; then
-    log "mexportArchive ipa包,漂亮一遍过"
+    echo "\033[33;1mexportArchive ipa包,漂亮一遍过\033[0m"
   else
-    log "mexportArchive ipa包,重复次数 : $failedTimes"
+    echo "\033[33;1mexportArchive ipa包,重复次数 : $failedTimes\033[0m"
   fi
 else
   handleExportArchiveFail
