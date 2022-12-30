@@ -23,9 +23,10 @@ log() {
 
 exitShell() {
   # killall iTerm2  #这两个会把所有的都关掉,不可以
-  exit 0 #退出了后边就无法执行了
+  # exit 0 #退出了后边就无法执行了
   # killall Terminal #为了用于command时,关闭窗口
   # osascript -e "tell application \"System Events\" to keystroke \"w\" using command down"
+  echo '退出'
 }
 
 removeTrash() {
@@ -75,23 +76,27 @@ showArchiveTime() {
   fi
 }
 
-completeArchive() {
+discardChange() {
   if [[ -e $agconnect_services ]]; then
     cd $project_path
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
     log '华为推送json文件已重置'
   fi
-  showArchiveTime
-  removeTrash
 }
 
 uploadArchive() {
   if [[ -e $packagePath ]]; then
     cd $CURRENT_DIR
     sh upload.sh ${packagePath}
-    completeArchive
+    if [ $? -ne 0 ]; then
+      uploadArchive
+    else #上传完成
+      discardChange
+      showArchiveTime
+      removeTrash
+    fi
   else
-    log '打包失败,ipa/apk包找不到'
+    log 'ipa/apk包找不到'
     exitShell
   fi
 }
@@ -107,12 +112,13 @@ packageiOS() {
     open $packagePath
   else
     sh ipa.sh $project_path/ios $target
-    if [ $? -ne 0 ]; then
-      log '打包ipa失败了'
-    else
-      cd $project_path
-      packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
+    cd $project_path
+    packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
+    if [[ -e $packagePath ]]; then
       uploadArchive
+    else
+      log '打包ipa失败了'
+      packageiOS
     fi
   fi
 }
@@ -135,7 +141,12 @@ packageAndroid() {
   handleHuaweiConfig
   flutter build apk --flavor ${target} --release
   packagePath=$(find ${project_path}/build/app/outputs/flutter-apk -name "app-${target}-release.apk")
-  uploadArchive
+  if [[ -e $packagePath ]]; then
+    uploadArchive
+  else
+    log '打包apk失败了'
+    packageAndroid
+  fi
 }
 
 updatePub() {
@@ -144,15 +155,16 @@ updatePub() {
   flutter packages pub get
   if [ $? -ne 0 ]; then
     log 'flutter pub get失败了'
+    updatePub
   else
     log 'pub get完成'
   fi
-  flutter packages upgrade
-  if [ $? -ne 0 ]; then
-    log 'flutter packages upgrade失败了'
-  else
-    log 'pub upgrade完成'
-  fi
+  # flutter packages upgrade
+  # if [ $? -ne 0 ]; then
+  #   log 'flutter packages upgrade失败了'
+  # else
+  #   log 'pub upgrade完成'
+  # fi
 }
 
 askArchive() {
@@ -219,7 +231,7 @@ handleVersion() {
     log "没有找到打包的flutter版本,自动退出打包"
     exitShell
   fi
-  flutter --version
+  # flutter --version
 }
 
 handleEnv() {
