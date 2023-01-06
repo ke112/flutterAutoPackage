@@ -1,21 +1,27 @@
 #!/bin/bash
 #--------------------------------------------
-# 使用介绍 ： flutter开发项目中，兼容iOS Android自动打包上传到蒲公英脚本 2022.3.1
-# 使用方式 ： sh dabao.sh /user/xxx/shop_app 1 3 1 2
-# 使用说明列举如下 ：
+# 介绍 ： flutter开发项目中，兼容iOS Android自动打包上传到蒲公英脚本 2022.3.1
 # 1.包含自动打iOS Android包，android必须为flutter项目
 # 2.自动上传到蒲公英平台，可自定义apikey ukey，以及上传后自动打开下载的web界面
 # 3.上传完毕，自动清理打包的产生的ipa apk等垃圾文件
+
+# 使用命令：
+# cd && sh /Users/ke/Desktop/my_git/flutterAutoPackage/dabao.sh /Users/ke/Desktop/合生通app/mlife_app_b 1 3 5 2
 # 4.$1为需要打包的项目地址
 # 5.$2为可传对应平台 1:iOS  2:Android
-# 6.$3为对应环境 1:正式 2:灰度 3:测试 4:开发 5:App Store(iOS)
-# 7.$4为flutter开发环境 1.最新版本 2:3.0.5  3:2.10.5  4:2.8.1  5:2.5.3
-# 6.$5为打包模式 1:常规打包 2:快速打包
-# 此shell依赖 ipa.sh 和 upload.sh
-#
-# tips:
+# 6.$3为对应环境 1:正式  2:灰度  3:测试  4:开发  5:App Store(iOS)
+# 7.$4为flutter开发环境 1.最新版本  2:3.0.5  3:2.10.5  4:2.8.1  5:2.5.3
+# 6.$5为打包模式 1:常规打包  2:快速打包 (tip:区别在于常规打包包括拉取新代码以及flutter三方库的更新,快速打包模式务必保证是可以直接运行的代码)
+
+# 注意:
 # 1.针对打安卓包,如果一直running grade task卡住,需要替换flutter sdk以及当前Android/app 中的repositories
+# 2.为实现解耦功能,部分功能拆解开,此shell依赖 ipa.sh 和 upload.sh
 #--------------------------------------------
+
+CURRENT_DIR=$(
+  cd $(dirname $0)
+  pwd
+)
 
 log() {
   echo "\033[42;97m $* \033[0m"
@@ -42,20 +48,25 @@ removeTrash() {
   nowTime=$(date +%Y-%m-%d-%H:%M:%S)
   nowTime_s=$(date +%s)
   # log "现在时间: "$nowTime_s
-  cd
+  cd $CURRENT_DIR
+
   if [ ! -e lastBuildTime ]; then
     touch lastBuildTime
-    echo $nowTime_s >lastBuildTime
-    # log "写入历史值: "$nowTime_s
+    echo $nowTime >>lastBuildTime
+    echo $nowTime_s >>lastBuildTime
+    echo "" >>lastBuildTime
+    log "写入历史值: "$nowTime_s
   fi
-  oldValue_s=$(sed -n '1p' lastBuildTime)
-  pass=$((nowTime_s - oldValue_s))
+  # oldValue_s=$(sed -n '1p' lastBuildTime)
+  # pass=$((nowTime_s - oldValue_s))
   # log "间隔差值: "$pass
-  if [[ $pass -gt 86400 ]]; then #86400是24个小时
-    echo $nowTime_s >lastBuildTime
-    sh clear.sh
+  if [[ $pass -gt $((86400 * 7)) ]]; then #86400是24个小时
+    # rm lastBuildTime
+    echo $nowTime >>lastBuildTime
+    echo $nowTime_s >>lastBuildTime
+    echo "" >>lastBuildTime
+    echo '周期性清理了..'
   fi
-  log '清理完成'
   exitShell
 }
 
@@ -63,9 +74,9 @@ showArchiveTime() {
   endTime=$(date +%Y-%m-%d-%H:%M:%S)
   endTime_s=$(date +%s)
   sumTime=$(($endTime_s - $startTime_s))
-  log "打包开始时间 $startTime"
-  log "上传结束时间 $endTime"
-  endDes='打包上传用时:'
+  log "打包开始: $startTime"
+  log "上传结束: $endTime"
+  endDes='上传用时:'
   if (($sumTime > 60)); then
     hour=$(expr ${sumTime} / 60)
     used=$(expr ${hour} \* 60)
@@ -76,11 +87,11 @@ showArchiveTime() {
   fi
 }
 
-discardChange() {
+discardAndroidDynamicConfig() {
   if [[ -e $agconnect_services ]]; then
     cd $project_path
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
-    log '华为推送json文件已重置'
+    log 'Android华为推送json文件已重置'
   fi
 }
 
@@ -91,7 +102,7 @@ uploadArchive() {
     if [ $? -ne 0 ]; then
       uploadArchive
     else #上传完成
-      discardChange
+      discardAndroidDynamicConfig
       showArchiveTime
       removeTrash
     fi
@@ -123,7 +134,7 @@ packageiOS() {
   fi
 }
 
-handleHuaweiConfig() {
+androidDynamicConfig() {
   packageJson=$(find ${project_path}/android/app -name "agconnect-services-${target}.json")
   agconnect_services=$(find ${project_path}/android/app -name "agconnect-services.json")
 
@@ -138,7 +149,7 @@ handleHuaweiConfig() {
 packageAndroid() {
   log "开始打Android-${target}环境"
   cd $project_path
-  handleHuaweiConfig
+  androidDynamicConfig
   flutter build apk --flavor ${target} --release
   packagePath=$(find ${project_path}/build/app/outputs/flutter-apk -name "app-${target}-release.apk")
   if [[ -e $packagePath ]]; then
