@@ -15,7 +15,7 @@ project_dir=$1
 scheme=$2
 testflight=$3
 
-log() {
+function log() {
   echo "\033[42;97m $* \033[0m"
 }
 
@@ -32,23 +32,31 @@ if [[ -e $project_dir ]]; then
 
   fi
 
-  cd $project_dir
-  # 是否编译工作空间
-  workspace_name=$(find . -name *.xcworkspace | awk -F "[/.]" '{print $(NF-1)}')
-  # .xcodeproj的名字，如果is_workspace为false，则必须填。否则可不填
-  project_name=$(find . -name *.xcodeproj | awk -F "[/.]" '{print $(NF-1)}')
+  function check_ios() {
+    cd $project_dir
+    # 是否编译工作空间
+    workspace_name=$(find . -name *.xcworkspace | awk -F "[/.]" '{print $(NF-1)}')
+    # .xcodeproj的名字，如果is_workspace为false，则必须填。否则可不填
+    project_name=$(find . -name *.xcodeproj | awk -F "[/.]" '{print $(NF-1)}')
 
-  if [[ -d "$workspace_name" || -d "$project_name" ]]; then
-    log '找到ios项目,继续流程'
-  else
-    log '无法找到ios工程,退出打包'
-    exit 1
-  fi
+    if [[ -d "$workspace_name" || -d "$project_name" ]]; then
+      if [[ ! -d "$workspace_name" && -e Podfile ]]; then
+        echo '如果有podfile,但还没有pod install'
+        pod install
+        check_ios
+      fi
+      log '找到ios项目,继续流程'
+    else
+      log '无法找到ios工程,退出打包'
+      exit 1
+    fi
+  }
+  check_ios
 
   # 检查是否有scheme
   if [[ ! -n $scheme ]]; then
     scheme=$project_name
-    echo '默认scheme为' $scheme
+    log '默认scheme为:'$scheme
     # log "请输入要打包的scheme (Target),不能有错误,默认是主工程scheme"
     # read -r scheme
 
@@ -56,7 +64,7 @@ if [[ -e $project_dir ]]; then
     #   scheme=$project_name
     # fi
   else
-    echo '自定义scheme为' $scheme
+    log '自定义scheme为:'$scheme
   fi
   log '开始打包ios'
 else
@@ -92,11 +100,19 @@ bundle_identifier=""
 
 cd $project_dir
 
-if [ -d "$workspace_name" ]; then
-  is_workspace="true"
+function update_library() {
+  if [ -d "$workspace_name" ]; then
+    is_workspace="true"
 
-  if [ -e Podfile ]; then
-    echo '存在Podfile'
+    #针对flutter项目,校验是否pub get
+    if [[ -e "$project_dir/Flutter" && ! -f "$project_dir/Flutter/Generated.xcconfig" ]]; then
+      echo 'flutter项目要求的Generated.xcconfig不存在,自动处理中'
+      cd $project_dir && cd ../
+      ulimit -n 4096
+      flutter clean
+      flutter pub get
+      cd $project_dir
+    fi
 
     #输入pod install或者pod update之后，
     #- CocoaPods首先会去匹配本地spec库；
@@ -108,20 +124,20 @@ if [ -d "$workspace_name" ]; then
       log 'pod install 1 失败'
       pod repo update
       if [ $? -ne 0 ]; then
-        log 'pod repo update 2 失败'
+        log 'pod repo update 失败'
         exit 1
       else
-        log 'pod repo update 3 完成'
+        log 'pod repo update 完成'
       fi
     else
       log 'pod install 完成'
     fi
   else
-    echo '不存在Podfile'
+    is_workspace="false"
   fi
-else
-  is_workspace="false"
-fi
+}
+
+update_library
 
 log "--------------------脚本配置参数检查--------------------"
 echo "\033[33;1mis_workspace=${is_workspace} "
@@ -131,7 +147,7 @@ log "scheme_name=${scheme_name}"
 log "build_configuration=${build_configuration}"
 log "bundle_identifier=${bundle_identifier}"
 log "method=${method}"
-log "mobileprovision_name=${mobileprovision_name} \033[0m"
+# log "mobileprovision_name=${mobileprovision_name} \033[0m"
 
 # 时间
 DATE=$(date '+%Y%m%d_%H%M%S')
@@ -210,7 +226,7 @@ fi
 
 echo "\033[32m开始导出ipa文件 \033[0m"
 
-exportArchive() {
+function exportArchive() {
   # 先删除export_options_plist文件
   if [ -f "$export_options_plist_path" ]; then
     #log "${export_options_plist_path}文件存在，进行删除"
@@ -239,7 +255,7 @@ exportArchive() {
 }
 
 failedTimes=0
-handleExportArchiveFail() {
+function handleExportArchiveFail() {
   if [[ $failedTimes == 3 ]]; then
     log '最大失败循环够了,退出'
     open $export_archive_path

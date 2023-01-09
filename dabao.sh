@@ -23,11 +23,11 @@ CURRENT_DIR=$(
   pwd
 )
 
-log() {
+function log() {
   echo "\033[42;97m $* \033[0m"
 }
 
-exitShell() {
+function exitShell() {
   # killall iTerm2  #这两个会把所有的都关掉,不可以
   # exit 0 #退出了后边就无法执行了
   # killall Terminal #为了用于command时,关闭窗口
@@ -35,7 +35,7 @@ exitShell() {
   echo '退出'
 }
 
-removeTrash() {
+function removeTrash() {
   buildPath1=${project_path}/build/ #使用flutter命令打的安卓包
   buildPath2=${project_path}/android/app/build/
   buildPath3=${project_path}/ios/Package/          #使用xcodebuild命令打的ios包
@@ -70,7 +70,7 @@ removeTrash() {
   exitShell
 }
 
-showArchiveTime() {
+function showArchiveTime() {
   endTime=$(date +%Y-%m-%d-%H:%M:%S)
   endTime_s=$(date +%s)
   sumTime=$(($endTime_s - $startTime_s))
@@ -87,7 +87,7 @@ showArchiveTime() {
   fi
 }
 
-discardAndroidDynamicConfig() {
+function discardAndroidDynamicConfig() {
   if [[ -e $agconnect_services ]]; then
     cd $project_path
     git checkout -- $agconnect_services #安卓打包重置华为配置文件
@@ -95,7 +95,7 @@ discardAndroidDynamicConfig() {
   fi
 }
 
-uploadArchive() {
+function uploadArchive() {
   if [[ -e $packagePath ]]; then
     cd $CURRENT_DIR
     sh upload.sh ${packagePath}
@@ -112,7 +112,7 @@ uploadArchive() {
   fi
 }
 
-packageiOS() {
+function packageiOS() {
   log "开始打iOS-${target}环境"
   cd $CURRENT_DIR
   if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
@@ -134,7 +134,7 @@ packageiOS() {
   fi
 }
 
-androidDynamicConfig() {
+function androidDynamicConfig() {
   packageJson=$(find ${project_path}/android/app -name "agconnect-services-${target}.json")
   agconnect_services=$(find ${project_path}/android/app -name "agconnect-services.json")
 
@@ -146,7 +146,7 @@ androidDynamicConfig() {
   fi
 }
 
-packageAndroid() {
+function packageAndroid() {
   log "开始打Android-${target}环境"
   cd $project_path
   androidDynamicConfig
@@ -160,7 +160,7 @@ packageAndroid() {
   fi
 }
 
-updatePub() {
+function updatePub() {
   ulimit -n 4096
   flutter clean
   flutter packages pub get
@@ -178,7 +178,7 @@ updatePub() {
   # fi
 }
 
-askArchive() {
+function askArchive() {
   cd $project_path
   branch=$(git branch --show-current)
   log "当前的代码分支为: $branch"
@@ -190,7 +190,7 @@ askArchive() {
   updatePub
 }
 
-prePackage() {
+function prePackage() {
   startTime=$(date +%Y-%m-%d-%H:%M:%S)
   startTime_s=$(date +%s)
   if (($isFast == 2)); then
@@ -210,7 +210,7 @@ prePackage() {
   fi
 }
 
-handlePlat() {
+function handlePlat() {
   if ((${plat} == 1)); then
     log "选择的平台是iOS"
   elif ((${plat} == 2)); then
@@ -221,7 +221,7 @@ handlePlat() {
   fi
 }
 
-handleVersion() {
+function handleVersion() {
   ss='选择的flutter版本是'
   if ((${version} == 1)); then
     log $ss'最新的'
@@ -245,7 +245,7 @@ handleVersion() {
   # flutter --version
 }
 
-handleEnv() {
+function handleEnv() {
   ss='选择的环境是'
   if ((${env} == 1)); then
     log $ss'正式'

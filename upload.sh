@@ -19,7 +19,7 @@ readonly api_key="caa6bdf185bef46bbe828fae81a15506"
 # readonly api_key='c5b7baed38a6c2fa99d972caa9a2a0a7'
 readonly file=$1
 
-printHelp() {
+function printHelp() {
   echo "Usage: $0 api_key file"
   echo "Example: $0 <your_api_key> <your_apk_or_ipa_path>"
 }
@@ -52,15 +52,15 @@ fi
 # functions
 # ---------------------------------------------------------------
 
-log() {
+function log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"
 }
 
-logTitle() {
+function logTitle() {
   log "-------------------------------- $* --------------------------------"
 }
 
-execCommand() {
+function execCommand() {
   log "$@"
   result=$(eval $@)
 }
