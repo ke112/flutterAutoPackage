@@ -27,14 +27,6 @@ function log() {
   echo "\033[42;97m $* \033[0m"
 }
 
-function exitShell() {
-  # killall iTerm2  #这两个会把所有的都关掉,不可以
-  # exit 0 #退出了后边就无法执行了
-  # killall Terminal #为了用于command时,关闭窗口
-  # osascript -e "tell application \"System Events\" to keystroke \"w\" using command down"
-  echo '退出'
-}
-
 function removeTrash() {
   buildPath1=${project_path}/build/ #使用flutter命令打的安卓包
   buildPath2=${project_path}/android/app/build/
@@ -67,24 +59,6 @@ function removeTrash() {
     echo "" >>lastBuildTime
     echo '周期性清理了..'
   fi
-  exitShell
-}
-
-function showArchiveTime() {
-  endTime=$(date +%Y-%m-%d-%H:%M:%S)
-  endTime_s=$(date +%s)
-  sumTime=$(($endTime_s - $startTime_s))
-  log "打包开始: $startTime"
-  log "上传结束: $endTime"
-  endDes='上传用时:'
-  if (($sumTime > 60)); then
-    hour=$(expr ${sumTime} / 60)
-    used=$(expr ${hour} \* 60)
-    left=$(expr ${sumTime} - ${used})
-    log "${endDes} ${hour}分${left}秒"
-  else
-    log "${endDes} ${sumTime}秒"
-  fi
 }
 
 function discardAndroidDynamicConfig() {
@@ -95,6 +69,34 @@ function discardAndroidDynamicConfig() {
   fi
 }
 
+function exitShell() {
+  # killall iTerm2  #这两个会把所有的都关掉,不可以
+  # killall Terminal #为了用于command时,关闭窗口
+  # osascript -e "tell application \"System Events\" to keystroke \"w\" using command down"
+
+  discardAndroidDynamicConfig
+  removeTrash
+  echo '退出'
+  exit 0 #退出了后边就无法执行了
+}
+
+function showArchiveTime() {
+  endTime=$(date +%Y-%m-%d-%H:%M:%S)
+  endTime_s=$(date +%s)
+  sumTime=$(($endTime_s - $startTime_s))
+  log "开始时间: $startTime"
+  log "结束时间: $endTime"
+  endDes='总共用时:'
+  if (($sumTime > 60)); then
+    hour=$(expr ${sumTime} / 60)
+    used=$(expr ${hour} \* 60)
+    left=$(expr ${sumTime} - ${used})
+    log "${endDes} ${hour}分${left}秒"
+  else
+    log "${endDes} ${sumTime}秒"
+  fi
+}
+
 function uploadArchive() {
   if [[ -e $packagePath ]]; then
     cd $CURRENT_DIR
@@ -102,9 +104,8 @@ function uploadArchive() {
     if [ $? -ne 0 ]; then
       uploadArchive
     else #上传完成
-      discardAndroidDynamicConfig
       showArchiveTime
-      removeTrash
+      exitShell
     fi
   else
     log 'ipa/apk包找不到'
@@ -112,26 +113,42 @@ function uploadArchive() {
   fi
 }
 
+function failedPackageHandle() {
+  log '已自动处理,重新打包'
+  cd $project_path
+  git stash
+  git stash clear
+  git stash pop
+}
+failedPackageTimes=0
 function packageiOS() {
-  log "开始打iOS-${target}环境"
-  cd $CURRENT_DIR
-  if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
-    sh ipa.sh $project_path $target 1
-    # 自己去上传
-    cd $project_path
-    packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
-    open $packagePath
+  if [[ $failedPackageTimes == 2 ]]; then
+    log '打包ipa失败了,已退出'
+    exit 1
   else
-    sh ipa.sh $project_path/ios $target
-    cd $project_path
-    packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
-    if [[ -e $packagePath ]]; then
-      uploadArchive
+    log "开始打iOS-${target}环境"
+    cd $CURRENT_DIR
+    if [ ${env} == 5 ]; then #如果testflight,暂时不需要打ipa包,手动上传
+      sh ipa.sh $project_path $target 1
+      # 自己去上传
+      cd $project_path
+      packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
+      open $packagePath
     else
-      log '打包ipa失败了'
-      packageiOS
+      sh ipa.sh $project_path/ios $target
+      cd $project_path
+      packagePath=$(find ${project_path}/ios/Package/${target} -name "*.ipa")
+      if [[ -e $packagePath ]]; then
+        uploadArchive
+      else
+        log '打包ipa失败了,自动处理'
+        failedPackageTimes=$(($failedPackageTimes + 1))
+        failedPackageHandle
+        packageiOS
+      fi
     fi
   fi
+
 }
 
 function androidDynamicConfig() {
@@ -147,16 +164,22 @@ function androidDynamicConfig() {
 }
 
 function packageAndroid() {
-  log "开始打Android-${target}环境"
-  cd $project_path
-  androidDynamicConfig
-  flutter build apk --flavor ${target} --release
-  packagePath=$(find ${project_path}/build/app/outputs/flutter-apk -name "app-${target}-release.apk")
-  if [[ -e $packagePath ]]; then
-    uploadArchive
+  if [[ $failedPackageTimes == 2 ]]; then
+    log '打包apk失败了,已退出'
+    exit 1
   else
-    log '打包apk失败了'
-    packageAndroid
+    log "开始打Android-${target}环境"
+    cd $project_path
+    androidDynamicConfig
+    flutter build apk --flavor ${target} --release
+    packagePath=$(find ${project_path}/build/app/outputs/flutter-apk -name "app-${target}-release.apk")
+    if [[ -e $packagePath ]]; then
+      uploadArchive
+    else
+      log '打包apk失败了,自动处理'
+      failedPackageHandle
+      packageAndroid
+    fi
   fi
 }
 
@@ -178,7 +201,7 @@ function updatePub() {
   # fi
 }
 
-function askArchive() {
+function gitUpdate() {
   cd $project_path
   branch=$(git branch --show-current)
   log "当前的代码分支为: $branch"
@@ -197,7 +220,7 @@ function prePackage() {
     log '开启快速打包'
   else
     log '默认全面打包'
-    askArchive
+    gitUpdate
   fi
 
   if ((${plat} == 1)); then

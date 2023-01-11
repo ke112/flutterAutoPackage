@@ -21,7 +21,6 @@ function log() {
 
 if [[ -e $project_dir ]]; then
   if [[ -e "$project_dir/ios" && -e "$project_dir/android" ]]; then
-
     if [[ -e "$project_dir/example" ]]; then
       log '是flutter plugin项目'
       project_dir=$project_dir/example/ios
@@ -29,7 +28,6 @@ if [[ -e $project_dir ]]; then
       log '是flutter application项目'
       project_dir=$project_dir/ios
     fi
-
   fi
 
   function check_ios() {
@@ -38,7 +36,6 @@ if [[ -e $project_dir ]]; then
     workspace_name=$(find . -name *.xcworkspace | awk -F "[/.]" '{print $(NF-1)}')
     # .xcodeproj的名字，如果is_workspace为false，则必须填。否则可不填
     project_name=$(find . -name *.xcodeproj | awk -F "[/.]" '{print $(NF-1)}')
-
     if [[ -d "$workspace_name" || -d "$project_name" ]]; then
       if [[ ! -d "$workspace_name" && -e Podfile ]]; then
         echo '如果有podfile,但还没有pod install'
@@ -52,14 +49,12 @@ if [[ -e $project_dir ]]; then
     fi
   }
   check_ios
-
   # 检查是否有scheme
   if [[ ! -n $scheme ]]; then
     scheme=$project_name
     log '默认scheme为:'$scheme
     # log "请输入要打包的scheme (Target),不能有错误,默认是主工程scheme"
     # read -r scheme
-
     # if [[ ! -n $scheme ]]; then
     #   scheme=$project_name
     # fi
@@ -76,10 +71,8 @@ fi
 
 # 指定项目的scheme名称（也就是工程的target名称），必填
 scheme_name=$scheme
-
 # method，打包的方式。方式分别为 development, ad-hoc, app-store, enterprise 。必填
 method="ad-hoc"
-
 if [[ $testflight = 1 ]]; then #如果上传App Store,需要修改method标识
   log 'App Store版本'
   method="app-store"
@@ -88,22 +81,17 @@ fi
 
 # 指定要打包编译的方式 : Release,Debug, 必填
 build_configuration="Release"
-
 #  下面两个参数只是在手动指定Pofile文件的时候用到，如果使用Xcode自动管理Profile,直接留空就好
 # (跟method对应的)mobileprovision文件名，需要先双击安装.mobileprovision文件.手动管理Profile时必填
 mobileprovision_name=""
-
 # 项目的bundleID，手动管理Profile时必填
 bundle_identifier=""
 
 # =======================脚本的一些固定参数定义(无特殊情况不用修改)====================== #
-
 cd $project_dir
-
 function update_library() {
   if [ -d "$workspace_name" ]; then
     is_workspace="true"
-
     #针对flutter项目,校验是否pub get
     if [[ -e "$project_dir/Flutter" && ! -f "$project_dir/Flutter/Generated.xcconfig" ]]; then
       echo 'flutter项目要求的Generated.xcconfig不存在,自动处理中'
@@ -113,7 +101,6 @@ function update_library() {
       flutter pub get
       cd $project_dir
     fi
-
     #输入pod install或者pod update之后，
     #- CocoaPods首先会去匹配本地spec库；
     #- 在确认spec库不需要更新之后，才会下载相应的库文件；
@@ -256,8 +243,8 @@ function exportArchive() {
 
 failedTimes=0
 function handleExportArchiveFail() {
-  if [[ $failedTimes == 3 ]]; then
-    log '最大失败循环够了,退出'
+  if [[ $failedTimes == 2 ]]; then
+    log 'ipa.sh最大失败循环够了,退出'
     open $export_archive_path
     log "\033[31;1mexportArchive ipa包失败 1 😢 😢 😢     \033[0m"
     exit 1
