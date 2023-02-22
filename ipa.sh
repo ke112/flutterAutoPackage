@@ -1,5 +1,5 @@
 #!/bin/bash
-###
+### !!! 本地必须有打包的p12文件 !!!
 # 使用方法:
 # step1: 打开终端，进入到本脚本所在的目录下,然后执行以下命令. 项木路径可以是flutter根路径,也可以是ios根路径.
 # step2: 输入 sh archive.sh /User/ke/DeskTop/hopson_shop/ios dev 1
@@ -36,19 +36,22 @@ if [[ -e $project_dir ]]; then
     workspace_name=$(find . -name *.xcworkspace | awk -F "[/.]" '{print $(NF-1)}')
     # .xcodeproj的名字，如果is_workspace为false，则必须填。否则可不填
     project_name=$(find . -name *.xcodeproj | awk -F "[/.]" '{print $(NF-1)}')
+    # project或者space有一个
     if [[ -d "$workspace_name" || -d "$project_name" ]]; then
-      if [[ ! -d "$workspace_name" && -e Podfile ]]; then
-        echo '如果有podfile,但还没有pod install'
+      if [[ ! -d Podfile && ! -d "$workspace_name" ]]; then
+        echo '不存在podfile且没有space,是最简单的原生项目'
+      else
+        pod init
         pod install
-        check_ios
       fi
-      log '找到ios项目,继续流程'
+      log '>>找到ios项目,继续流程'
     else
       log '无法找到ios工程,退出打包'
       exit 1
     fi
   }
   check_ios
+
   # 检查是否有scheme
   if [[ ! -n $scheme ]]; then
     scheme=$project_name

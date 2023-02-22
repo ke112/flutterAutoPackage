@@ -13,10 +13,10 @@
 #
 
 # hopson
-readonly api_key="caa6bdf185bef46bbe828fae81a15506"
+# readonly api_key=""
 
 # zhang
-# readonly api_key='c5b7baed38a6c2fa99d972caa9a2a0a7'
+readonly api_key='c5b7baed38a6c2fa99d972caa9a2a0a7'
 readonly file=$1
 
 function printHelp() {
